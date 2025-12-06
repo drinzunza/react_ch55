@@ -8,11 +8,13 @@
  */
 
 const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
-const functions = require("firebase-functions");
+// const {onRequest} = require("firebase-functions/https");
+// const logger = require("firebase-functions/logger");
+// const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const axios = require("axios");
+
+// Import functions from separate files
+const { sendOrderToToast } = require("./sendOrderToToast");
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -30,35 +32,5 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-exports.sendOrderToToast = functions.https.onCall(async (data, context) => {
-  const { userId, items, timestamp } = data;
-
-  if (!userId || !Array.isArray(items)) {
-    throw new functions.https.HttpsError("invalid-argument", "Invalid input");
-  }
-
-  const orderData = {
-    userId,
-    items,
-    timestamp,
-    status: "pending"
-  };
-
-  // Save to Firestore
-  const orderRef = await admin.firestore().collection("orders").add(orderData);
-
-  // Call Toast API
-  try {
-    await axios.post("https://api.toast.com/orders", {
-      externalOrderId: orderRef.id,
-      items,
-      userId
-    });
-
-    await orderRef.update({ status: "sent_to_toast" });
-    return { success: true, orderId: orderRef.id };
-  } catch (error) {
-    await orderRef.update({ status: "toast_error", error: error.message });
-    throw new functions.https.HttpsError("internal", "Toast API failed");
-  }
-});
+// Re-export functions
+exports.sendOrderToToast = sendOrderToToast;
